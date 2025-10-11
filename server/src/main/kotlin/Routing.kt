@@ -1,23 +1,17 @@
-package dev.jcasas.money
-
-import io.ktor.http.*
-import io.ktor.serialization.gson.*
-import io.ktor.serialization.kotlinx.json.*
+import core.budget.api.budgetApi
+import core.user.api.configApi
 import io.ktor.server.application.*
-import io.ktor.server.plugins.calllogging.*
-import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import java.sql.Connection
-import java.sql.DriverManager
-import org.jetbrains.exposed.sql.*
-import org.slf4j.event.*
 
 fun Application.configureRouting() {
     routing {
         get("/") {
             call.respond(mapOf("message" to "Hello World!"))
+        }
+        route("api/v1") {
+            configApi()
+            budgetApi()
         }
     }
 }

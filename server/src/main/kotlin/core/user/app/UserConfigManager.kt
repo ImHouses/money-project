@@ -1,4 +1,4 @@
-package dev.jcasas.money.core.user.app
+package core.user.app
 
 import core.user.domain.BudgetConfig
 import core.user.domain.BudgetItemConfig
