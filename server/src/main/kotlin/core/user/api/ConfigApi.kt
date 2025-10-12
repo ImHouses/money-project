@@ -1,8 +1,9 @@
 package core.user.api
 
 import common.toCents
+import common.validateAmount
 import core.user.domain.BudgetItemConfig
-import dev.jcasas.money.core.user.api.requests.ConfigPayload
+import core.user.api.requests.ConfigPayload
 import core.user.app.UserConfigManager
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.plugins.requestvalidation.RequestValidation
@@ -12,6 +13,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 
 fun Route.configApi() {
     val configManager = UserConfigManager()
@@ -26,8 +28,8 @@ fun Route.configApi() {
                     if (budgetItem.description != null && budgetItem.description.isEmpty()) {
                         return@validate ValidationResult.Invalid("Invalid payload")
                     }
-                    if (budgetItem.amount < 0) {
-                        return@validate ValidationResult.Invalid("Invalid payload")
+                    if (budgetItem.amount.isNotEmpty()) {
+                        validateAmount(budgetItem.amount)
                     }
                 }
                 ValidationResult.Valid
@@ -39,8 +41,15 @@ fun Route.configApi() {
             val budgetItems = configPayload.budgetItems.map {
                 BudgetItemConfig(name = it.name, amount = it.amount.toCents(), description = it.description)
             }
-            configManager.init(budgetItems)
-            call.respond(HttpStatusCode.OK)
+            runCatching {
+                newSuspendedTransaction {
+                    configManager.init(budgetItems)
+                }
+            }.onSuccess {
+                call.respond(HttpStatusCode.OK)
+            }.onFailure {
+                call.respond(HttpStatusCode.InternalServerError, it.message ?: "Unknown error")
+            }
         }
     }
 }

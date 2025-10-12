@@ -1,4 +1,4 @@
-package dev.jcasas.money.core.user.api.requests
+package core.user.api.requests
 
 import com.google.gson.annotations.SerializedName
 
@@ -11,7 +11,7 @@ data class BudgetItemConfigPayload(
     @SerializedName("name")
     val name: String,
     @SerializedName("amount")
-    val amount: Int,
+    val amount: String,
     @SerializedName("description")
     val description: String?
 )

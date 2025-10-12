@@ -1,12 +1,14 @@
-package dev.jcasas.money.core.user.db
+package core.user.db
 
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import core.user.domain.BudgetItemConfig
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.json.json
 
 object UserConfigDbModel : IntIdTable("user_configs") {
-    val gson = Gson()
+    private val gson = Gson()
+    private val budgetItemConfigType = object : TypeToken<List<BudgetItemConfig>>() {}.type
 
     val budgetItems = json(
         "budget_items",
@@ -14,18 +16,7 @@ object UserConfigDbModel : IntIdTable("user_configs") {
             gson.toJson(budgetItems)
         },
         deserialize = { json ->
-            val jsonTree = gson.toJsonTree(json)
-            if (jsonTree.isJsonArray) {
-                jsonTree.asJsonArray.map {
-                    BudgetItemConfig(
-                        name = it.asString,
-                        amount = it.asInt.toBigDecimal(),
-                        description = it.asString
-                    )
-                }
-            } else {
-                emptyList()
-            }
+            gson.fromJson(json, budgetItemConfigType)
         }
     )
 }

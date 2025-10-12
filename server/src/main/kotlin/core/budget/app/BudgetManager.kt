@@ -12,11 +12,10 @@ import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import java.math.BigDecimal
 
 class BudgetManager(private val userConfigMgr: IUserConfigManager) : IBudgetManager {
-    override suspend fun get(year: Int, month: Int): Budget = newSuspendedTransaction {
+    override suspend fun get(year: Int, month: Int): Budget {
         var budgetItems = BudgetItemDbModel.selectAll()
             .where { (BudgetItemDbModel.year eq year) and (BudgetItemDbModel.month eq month) }
             .map(::toBudgetItem)
@@ -32,6 +31,9 @@ class BudgetManager(private val userConfigMgr: IUserConfigManager) : IBudgetMana
             .map {
                 BudgetTransaction(
                     id = it[TransactionDbModel.id].value,
+                    day = it[TransactionDbModel.day],
+                    month = it[TransactionDbModel.month],
+                    year = it[TransactionDbModel.year],
                     amount = BigDecimal(it[TransactionDbModel.amount]),
                     budgetItemId = it[TransactionDbModel.budgetItemId],
                     note = it[TransactionDbModel.note]
@@ -52,7 +54,7 @@ class BudgetManager(private val userConfigMgr: IUserConfigManager) : IBudgetMana
                 remainingAmount = it.amount - budgetTransactions.sumOf(BudgetTransaction::amount)
             )
         }
-        Budget(year = year, month = month, items = completeBudgetItems)
+        return Budget(year = year, month = month, items = completeBudgetItems)
     }
 
     override suspend fun addBudgetItem(
@@ -61,7 +63,7 @@ class BudgetManager(private val userConfigMgr: IUserConfigManager) : IBudgetMana
         name: String,
         amount: BigDecimal,
         description: String?
-    ): BudgetItem  = newSuspendedTransaction {
+    ): BudgetItem {
         val previouslySavedBudgetItemsCount = BudgetItemDbModel.selectAll()
             .where { (BudgetItemDbModel.year eq year) and (BudgetItemDbModel.month eq month) }
             .count()
@@ -69,7 +71,7 @@ class BudgetManager(private val userConfigMgr: IUserConfigManager) : IBudgetMana
         if (previouslySavedBudgetItemsCount <= 0) {
             createBudgetItemsFromConfig(year, month)
         }
-        BudgetItemDbModel.insert {
+        return BudgetItemDbModel.insert {
             it[BudgetItemDbModel.year] = year
             it[BudgetItemDbModel.month] = month
             it[BudgetItemDbModel.name] = name
@@ -78,6 +80,40 @@ class BudgetManager(private val userConfigMgr: IUserConfigManager) : IBudgetMana
         }.resultedValues
             ?.firstOrNull()
             ?.let(::toBudgetItem) ?: throw IllegalStateException()
+    }
+
+    override suspend fun recordTransaction(
+        budgetItemId: Int,
+        amount: BigDecimal,
+        day: Int,
+        note: String?
+    ): BudgetTransaction {
+        val (month, year) = BudgetItemDbModel.select(BudgetItemDbModel.month, BudgetItemDbModel.year)
+            .where { BudgetItemDbModel.id eq budgetItemId }
+            .firstOrNull()
+            ?.let {
+                it[BudgetItemDbModel.month] to it[BudgetItemDbModel.year]
+            } ?: throw IllegalStateException()
+        return TransactionDbModel.insert {
+            it[TransactionDbModel.amount] = amount.toInt()
+            it[TransactionDbModel.budgetItemId] = budgetItemId
+            it[TransactionDbModel.day] = day
+            it[TransactionDbModel.month] = month
+            it[TransactionDbModel.year] = year
+            it[TransactionDbModel.note] = note
+        }.resultedValues
+            ?.firstOrNull()
+            ?.let {
+                BudgetTransaction(
+                    id = it[TransactionDbModel.id].value,
+                    day = it[TransactionDbModel.day],
+                    month = it[TransactionDbModel.month],
+                    year = it[TransactionDbModel.year],
+                    amount = it[TransactionDbModel.amount].toBigDecimal(),
+                    budgetItemId = it[TransactionDbModel.budgetItemId],
+                    note = it[TransactionDbModel.note]
+                )
+            } ?: throw IllegalStateException()
     }
 
     private suspend fun createBudgetItemsFromConfig(year: Int, month: Int): List<BudgetItem> {
