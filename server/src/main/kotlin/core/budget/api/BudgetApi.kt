@@ -2,6 +2,7 @@ package core.budget.api
 
 import common.fromCents
 import common.toCents
+import core.budget.api.requests.NewBudgetItemPayload
 import core.budget.api.requests.NewTransactionPayload
 import core.budget.api.responses.BudgetItemResponsePayload
 import core.budget.api.responses.BudgetResponsePayload
@@ -57,6 +58,30 @@ fun Route.budgetApi() {
                         )
                     }
                 )
+            }.onSuccess {
+                call.respond(successResponse(it))
+            }.onFailure {
+                call.respond(HttpStatusCode.InternalServerError, failureResponse(it.message))
+            }
+        }
+
+        post("{year}/{month}") {
+            val year = call.parameters["year"]?.toInt()
+            val month = call.parameters["month"]?.toInt()
+            if (year == null || month == null) {
+                throw IllegalArgumentException("Invalid dates")
+            }
+            val payload = call.receive<NewBudgetItemPayload>()
+            runCatching {
+                newSuspendedTransaction {
+                    budgetManager.addBudgetItem(
+                        year = year,
+                        month = month,
+                        name = payload.name,
+                        amount = payload.amount.toCents(),
+                        description = payload.description
+                    )
+                }
             }.onSuccess {
                 call.respond(successResponse(it))
             }.onFailure {
