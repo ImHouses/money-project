@@ -1,35 +1,33 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import './App.css';
+import { BrowserRouter, Routes, Route } from 'react-router';
+import ExpensesRoot from './components/expenses-root/ExpensesRoot';
+import RecordTransaction from './components/record-transaction/RecordTransaction';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const today = new Date();
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
       <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<ExpensesRoot />} />
+            <Route
+              path="/transactions/new"
+              element={
+                // Pass today.getMonth() + 1 given that today.getMonth() is zero based
+                // but not the Date constructor.
+                <RecordTransaction
+                  month={today.getMonth() + 1}
+                  year={today.getFullYear()}
+                />
+              }
+            />
+          </Routes>
+        </BrowserRouter>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
     </>
-  )
+  );
 }
 
-export default App
+export default App;

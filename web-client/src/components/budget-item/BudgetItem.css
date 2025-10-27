@@ -1,0 +1,42 @@
+.budget-item span {
+  font-weight: 600;
+}
+
+.budget-item-remaining {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.budget-item-remaining-amount {
+  font-weight: 700;
+}
+
+.budget-item-amount {
+  font-weight: 700;
+  margin: 0;
+}
+
+.budget-item-transactions {
+  font-weight: 300;
+  font-size: 14px;
+  margin: 0;
+}
+
+.budget-item-transactions:hover {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.budget-item-description {
+  margin: 0;
+}
+
+.budget-item h3 {
+  margin-bottom: 2px;
+}
+
+.line-fill {
+  width: 250px;
+  border-bottom: 1.1px dashed #333;
+}
